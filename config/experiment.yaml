@@ -1,0 +1,73 @@
+project:
+  title: "Humanoid Walking Robustness under Domain Randomization"
+  robot: "Unitree G1"
+  task: "Isaac-Velocity-Flat-G1"
+  isaac_lab_release: "3.0.0"
+  isaac_sim_version_for_kit_visualization: "6.2.0"
+  rl_library: "rsl_rl"
+  algorithm: "PPO"
+  physics_backend: "newton_mjwarp"
+
+compute:
+  recommended_brev_gpu: "1x NVIDIA L40S"
+  num_envs: 64
+  max_iterations: 1500
+  training_seeds: [11, 22, 33]
+  checkpoint_policy: "retain final checkpoint and the best validation checkpoint; never select using test results"
+
+training:
+  baseline:
+    foot_contact_friction_static: [1.0, 1.0]
+    foot_contact_friction_dynamic: [1.0, 1.0]
+    pushes_enabled: false
+  randomized:
+    foot_contact_friction_static: [0.5, 1.25]
+    foot_contact_friction_dynamic: [0.5, 1.25]
+    pushes_enabled: true
+    push_interval_seconds: [5.0, 5.0]
+    push_root_velocity_delta_m_per_s:
+      x: [-0.5, 0.5]
+      y: [-0.5, 0.5]
+  controls:
+    disable_base_mass_randomization: true
+    disable_base_com_randomization: true
+    material_body_pattern: ".*_ankle_roll_link"
+    note: "The supplied implementation changes the contact material on the G1 ankle-roll/foot collision bodies. Under Newton, the material model exposes one friction coefficient; the dynamic range and PhysX bucket count are not operative. The root-velocity perturbation is a bounded disturbance proxy, not a calibrated force in Newtons."
+
+training_controls:
+  keep_identical_between_conditions:
+    - observation_space
+    - action_space
+    - reward_terms_and_weights
+    - PPO_network_and_hyperparameters
+    - simulation_timestep_and_decimation
+    - command_distribution
+    - number_of_environments
+    - training_iterations
+
+evaluation:
+  num_envs: 64
+  episodes_per_condition: 100
+  evaluation_seed: 2027
+  friction_coefficients: [0.4, 0.5, 0.875, 1.0, 1.25, 1.4]
+  push_velocity_limits_m_per_s: [0.0, 0.25, 0.5]
+  success_velocity_error_threshold_m_per_s: 0.35
+  success_requires_full_episode: true
+  episode_success_definition: "No fall/early termination, at least 95% of configured episode duration completed, and mean planar velocity-tracking error <= 0.35 m/s."
+  metrics:
+    - episode_success_rate
+    - mean_planar_velocity_tracking_error_m_per_s
+    - fall_frequency
+    - survival_time_seconds
+  notes:
+    - "The two held-out friction endpoints (0.4 and 1.4) are outside the randomized training interval [0.5, 1.25]."
+    - "The intermediate and nominal friction settings provide interpolation and in-range controls."
+    - "Push strengths denote the maximum absolute x/y root-velocity change set by the task push event, not force magnitudes."
+    - "Use the same evaluation seed and condition grid for both policies."
+
+outputs:
+  checkpoints: "../IsaacLab/logs/rsl_rl/g1_flat/"
+  raw_evaluation: "results/raw/"
+  processed: "results/processed/"
+  figures: "results/figures/"
+  videos: "results/videos/"

@@ -1,0 +1,7 @@
+policy,training_seed,checkpoint_path,checkpoint_iteration,notes
+baseline,11,,,,
+baseline,22,,,,
+baseline,33,,,,
+randomized,11,,,,
+randomized,22,,,,
+randomized,33,,,,
